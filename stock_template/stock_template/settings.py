@@ -11,15 +11,19 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 import os
+import redis
 from pathlib import Path
+
+#Base directory
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
+#Server seting.
+SITE_URL = 'http://127.0.0.1:8000'
+STATIC_URL = '/static/back/'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
+STATIC_ROOT = os.path.join(BASE_DIR, 'deploy_static/')
 SECRET_KEY = "django-insecure-emr=&oo%%y-hy6=)7n)^#+knef@u^$&^c3*j8-g=**qh@--)if"
 
 # SECURITY WARNING: don't run with debug turned on in production!
@@ -43,6 +47,10 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django_filters",
+    "rest_framework",
+    "rest_framework_swagger",
+    
     "account",
 ]
 
@@ -76,7 +84,17 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "stock_template.wsgi.application"
+ASGI_APPLICATION = 'conicle.routing.application'
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('redis', 6379)],
+        },
+    },
+}
 
+# Swagger settings
 SWAGGER_SETTINGS = {
     'IS_ENABLE': True,
     'SHOW_REQUEST_HEADERS': True,
@@ -92,6 +110,12 @@ CACHES = {
     }
 }
 
+FCM_DJANGO_SETTINGS = {
+    "FCM_SERVER_KEY": 'AIzaSyCMCQ8VdR-k5uy4jrVvssYUDZxGUm7w_DA',
+    "ONE_DEVICE_PER_USER": False,
+    "DELETE_INACTIVE_DEVICES": False,
+}
+
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
@@ -99,28 +123,44 @@ SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 
+# Internationalization setting
+# https://docs.djangoproject.com/en/1.11/topics/i18n/
+## Time zone setting
 
 TIME_ZONE = 'Asia/Bangkok'
 
+## Datetime format setting
 DATE_FORMAT = '%d %b %Y'
 DATE_FORMAT_INDEX = '%Y-%m-%d'
 TIME_FORMAT = '%H:%M'
 DATETIME_FORMAT = '%e %B %Y %H:%M:%S'
 TIMESTAMP_FORMAT = '%Y-%m-%d %H:%M:%S'
 
+## Language setting
+LANGUAGE_CODE = "en-us"
+USE_I18N = True
+USE_TZ = True
 
+## Front encoding.
 CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SECURE = True
 SESSION_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_SAMESITE = 'Lax'
 
+# Cached settings
+## Redis
+REDIS = redis.Redis('redis')
+RESULT_BACKEND = 'redis://redis:6379/0'
 
-SITE_URL = 'http://127.0.0.1:8000'
-STATIC_URL = '/static/back/'
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
-STATIC_ROOT = os.path.join(BASE_DIR, 'deploy_static/')
+## CELERY
+CELERY_BROKER_URL = 'amqp://rabbitmq:5672'
+CELERY_ACKS_LATE = True
+FLOWER_PROXY = 'http://127.0.0.1:5555/'
+RABBIT_MANAGEMENT_PROXY_URL = 'http://rabbitmq:15672/'
+
+CELERY_TIMEZONE = TIME_ZONE
+CELERYD_PREFETCH_MULTIPLIER = 1
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
@@ -128,10 +168,9 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'deploy_static/')
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "NAME": "mydatabase",
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -151,30 +190,17 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
-# Internationalization
-# https://docs.djangoproject.com/en/4.2/topics/i18n/
-
-LANGUAGE_CODE = "en-us"
-
-TIME_ZONE = "UTC"
-
-USE_I18N = True
-
-USE_TZ = True
-
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/4.2/howto/static-files/
-
-STATIC_URL = "static/"
-
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # logging
+LOGGING_MAXBYTES = 1024 * 1024 * 1024  # File size 1GB
+LOGGING_BACKUPCOUNT = 10  # x Backup 10 files
+LOGGING_INTERVAL = 1  # Every 1 Days
+LOGGING_FILE_LOCATION = '/backups/'  # Path log file
+LOGGING_LIMIT_TEXT_RESPONSE = 500
 ENABLE_LOGGING = False
 LOG_CONFIG = {
     'version': 1,
@@ -230,3 +256,10 @@ LOG_CONFIG = {
     }
 }
 
+# Testing setting ()
+ENABLE_LOGGING = False
+CELERY_TASK_ALWAYS_EAGER = True
+MONGODB_HOST = '127.0.0.1'
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+CACHES['default'] = {'BACKEND': 'django.core.cache.backends.dummy.DummyCache', }
+FCM_DJANGO_SETTINGS["FCM_SERVER_KEY"] = 'AIzaSyCMCQ8VdR-k5uy4jrVvssYUDZxGUm7w_DA'
