@@ -1,0 +1,26 @@
+version: '3.9'
+services:
+  rabbitmq:
+      image: rabbitmq:3-management-alpine
+      restart: always
+      hostname: 'rabbit-hostname'
+      volumes:
+        - ./rabbitmq-docker/data/:/var/lib/rabbitmq/
+        - ./rabbitmq-docker/logs/:/var/log/rabbitmq/
+      ports:
+        - 5673:5672
+        - 15673:15672
+  memcached:
+    image: memcached
+    restart: always
+    ports:
+    - 11213:11211
+  redis:
+    image: redis
+    restart: always
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    volumes:
+      - ./redis-data:/data
+    ports:
+      - 6373:6379
