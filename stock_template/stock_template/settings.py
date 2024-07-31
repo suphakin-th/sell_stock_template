@@ -94,6 +94,9 @@ CHANNEL_LAYERS = {
     },
 }
 
+# MODEL
+PASSWORD_MIN = 4
+
 # Swagger settings
 SWAGGER_SETTINGS = {
     'IS_ENABLE': True,

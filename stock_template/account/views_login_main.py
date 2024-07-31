@@ -6,12 +6,12 @@ from rest_framework import status
 
 from account.models import Account, Session, OneTimePassword
 from account.serializers import AccountSerializer
-from config.models import Config
+# from config.models import Config
 from log.models import Log
-from analytic.models import Session2 as AnalyticSession
+# from analytic.models import Session2 as AnalyticSession
 from utils.ip import get_client_ip
 from account.caches import cached_account_profile
-from group.models import Account as GroupAccount
+# from group.models import Account as GroupAccount
 
 
 def login_main(request, data, code, is_web, group='ACCOUNT_LOGIN'):
@@ -36,7 +36,9 @@ def login_main(request, data, code, is_web, group='ACCOUNT_LOGIN'):
                 Session.push(request.user, session_key)
 
                 if data['is_remember']:
-                    request.session.set_expiry(Config.pull_value('config-session-age'))
+                    # request.session.set_expiry(Config.pull_value('config-session-age'))
+                    # It's sec -> 60*60*24*365 -> ~ 1 Year
+                    request.session.set_expiry(31536000)
                 else:
                     request.session.set_expiry(0)
 
@@ -45,7 +47,7 @@ def login_main(request, data, code, is_web, group='ACCOUNT_LOGIN'):
                 else:
                     source = 1
                 ip = get_client_ip(request)
-                AnalyticSession.push(account, session_key, source, ip)
+                # AnalyticSession.push(account, session_key, source, ip)
                 Log.push(request, group, code, account, 'Login success by OTP (%s)' % data['username'], status.HTTP_200_OK)
                 return cached_account_profile(account.id), status.HTTP_200_OK
             else:
@@ -109,22 +111,14 @@ def login_main(request, data, code, is_web, group='ACCOUNT_LOGIN'):
         request.session.save()
         session_key = request.session.session_key
     Session.push(request.user, session_key)
-
-    if data['is_remember']:
-        if GroupAccount.objects.filter(group__type='ACCOUNT_CUSTOM_1', group__code='new_external_agent',
-                                       account_id=account.id).exists():
-            request.session.set_expiry(Config.pull_value('config-session-age-extra').get('new_external_agent', 0))
-        else:
-            request.session.set_expiry(Config.pull_value('config-session-age'))
-    else:
-        request.session.set_expiry(0)
+    request.session.set_expiry(31536000)
 
     if is_web:
         source = 0
     else:
         source = 1
     ip = get_client_ip(request)
-    AnalyticSession.push(account, session_key, source, ip)
+    # AnalyticSession.push(account, session_key, source, ip)
     Log.push(request, group, code, account, 'Login success', status.HTTP_200_OK)
     logger.info('200 OK (%s) Login Success' % data['username'])
     return cached_account_profile(account.id), status.HTTP_200_OK

@@ -5,7 +5,7 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import AllowAny
 from utils.response import Response
 
-from stock_template.account.views_login_main import login_main
+from account.views_login_main import login_main
 from .models import Account
 from .serializers import LoginSerializer
 

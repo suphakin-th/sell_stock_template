@@ -1,5 +1,7 @@
 from django.conf import settings
-from django.conf.urls import include, url
+from django.conf.urls import include
+from django.urls import re_path as url
+
 from rest_framework.routers import DefaultRouter, Route
 from .views_login import LoginView
 from .views_logout import LogoutView
