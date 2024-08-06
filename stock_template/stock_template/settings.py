@@ -25,6 +25,7 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 STATIC_ROOT = os.path.join(BASE_DIR, 'deploy_static/')
 SECRET_KEY = "django-insecure-emr=&oo%%y-hy6=)7n)^#+knef@u^$&^c3*j8-g=**qh@--)if"
+ROUTER_INCLUDE_ROOT_VIEW = False
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -52,6 +53,7 @@ INSTALLED_APPS = [
     "rest_framework_swagger",
     
     "account",
+    "log",
 ]
 
 MIDDLEWARE = [
@@ -62,7 +64,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",
+    # "whitenoise.middleware.WhiteNoiseMiddleware",
 ]
 
 ROOT_URLCONF = "stock_template.urls"
@@ -83,8 +85,9 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "stock_template.wsgi.application"
-ASGI_APPLICATION = 'conicle.routing.application'
+WSGI_APPLICATION = 'stock_template.wsgi.application'
+ASGI_APPLICATION = 'stock_template.routing.application'
+
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
@@ -197,6 +200,35 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+#REST_Framwork_setting
+REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'utils.rest_framework.pagination.CustomPagination',
+    'DEFAULT_FILTER_BACKENDS': ('django_filters.rest_framework.DjangoFilterBackend',),
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'EXCEPTION_HANDLER': 'utils.rest_framework.exception.exception_handler',
+
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer'
+    ),
+
+    'TEST_REQUEST_DEFAULT_FORMAT': 'json',
+    'TEST_REQUEST_RENDERER_CLASSES': (
+        'rest_framework.renderers.MultiPartRenderer',
+        'rest_framework.renderers.JSONRenderer',
+    ),
+    'PAGE_SIZE': 24,
+    # "DATE_INPUT_FORMATS": ["%d/%m/%Y"],
+    'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema',
+}
+
 
 # logging
 LOGGING_MAXBYTES = 1024 * 1024 * 1024  # File size 1GB

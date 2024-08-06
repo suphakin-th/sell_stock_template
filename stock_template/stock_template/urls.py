@@ -10,14 +10,9 @@ urlpatterns_api_user = [
     path('api/account/', include('account.urls')),
 
 ]
-urlpatterns_api_manage = [
-    path('api/manage/account/', include('account.manage.urls')),
-]
-
 
 urlpatterns_swagger = [
     path('api/', get_swagger_view(title='API Docs.', patterns=urlpatterns_api_user)),
-    path('api/manage/', get_swagger_view(title='API Manage Docs.', patterns=urlpatterns_api_manage)),
 ]
 
 urlpatterns = [

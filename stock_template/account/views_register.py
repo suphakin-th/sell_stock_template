@@ -2,30 +2,36 @@ import json
 
 from django.contrib.auth import login
 from django.conf import settings
-from django.core.validators import validate_email, ValidationError
+from django.core.validators import validate_email
 from django.utils import timezone
 from rest_framework import mixins
 from rest_framework import status, viewsets
 from rest_framework.permissions import AllowAny
 from rest_framework.exceptions import NotAcceptable
-from analytic.models import Session2 as AnalyticSession
-from config.models import Config
-from content_permission.models import Condition
 from log.models import Log
-from om.utils import get_gender
-from register_profile.register import Register
 from utils.ip import get_client_ip
 from utils.response import Response
 from .models import Account, Session
-from .models import IdentityVerification
 from .serializers import RegisterSerializer, AccountSerializer
-from term.models import Term, Consent, Privacy, PrivacyConsent
 
+def get_gender(gender):
+    _gender = 0
+    if gender == 'm':
+        _gender = 1
+    elif gender == 'f':
+        _gender = 2
+    elif gender == 'o':
+        _gender = 3
+    else:
+        try:
+            _gender = int(gender)
+            if _gender not in [0, 1, 2, 3]:
+                _gender = 0
+        except ValueError:
+            _gender = 0
+    return _gender
 
 def register(request, data, is_web):
-    config_register_value = Config.pull_value('config-register-form')
-    all_field = config_register_value['field_list']
-
     database_standard_field = {
         'username', 'email', 'password', 'confirm_password', 'title', 'first_name',
         'last_name', 'gender', 'date_birth', 'address',
@@ -34,32 +40,6 @@ def register(request, data, is_web):
         'code', 'code2', 'middle_name', 'id_card', 'company', 'count_experience'
     }
     param_extra_field = {}
-    # Check Empty Field
-    for field in all_field:
-        if not field['is_optional']:
-            if field['key'] not in data:
-                return {'detail': '%s_is_required' % field['key']}, status.HTTP_428_PRECONDITION_REQUIRED
-
-        value = data.get(field['key'])
-        if field['key'] in data and value and field['key'] not in str(database_standard_field):
-            param_extra_field[field['key']] = value
-
-        min_length = field.get('min_length')
-        max_length = field.get('max_length')
-        if min_length and value and len(value) < int(min_length) and max_length is None:
-            return {'detail': '%s_length_error' % field['key']}, status.HTTP_400_BAD_REQUEST
-            # return {'detail': '%s_must_be_more_than_%s_characters' % (field['key'], min_length)}, \
-            #        status.HTTP_400_BAD_REQUEST
-        if max_length and value and len(value) > int(max_length) and min_length is None:
-            return {'detail': '%s_length_error' % field['key']}, status.HTTP_400_BAD_REQUEST
-            # return {'detail': '%s_must_be_less_than_%s_characters' % (field['key'], max_length)}, \
-            #        status.HTTP_400_BAD_REQUEST
-        if max_length and value and len(value) > int(max_length) or min_length and value and len(value) < int(
-                min_length):
-            return {'detail': '%s_length_error' % field['key']}, status.HTTP_400_BAD_REQUEST
-            # return {'detail': '%s_must_be_%s_to_%s_characters' % (field['key'], min_length, max_length)}, \
-            #        status.HTTP_400_BAD_REQUEST
-
     username = Account.objects.filter(username__iexact=data.get('username', '').strip()).first()
     if username:
         return {'detail': 'username_has_been_already_use'}, status.HTTP_409_CONFLICT
@@ -91,13 +71,8 @@ def register(request, data, is_web):
     # is_publish_privacy = bool(_privacy)
     # _is_accept_privacy = True if not is_publish_privacy else data.get('is_accepted_privacy', False)
 
-    if not data.get('is_accepted_privacy', False) and bool(Privacy.get_publish()):
+    if not data.get('is_accepted_privacy', False):
         return {'detail': 'please_accept_privacy'}, status.HTTP_400_BAD_REQUEST
-
-    _privacy = Privacy.get_publish()
-    is_publish_privacy = bool(_privacy)
-    _is_accept_privacy = True if not is_publish_privacy else data.get('is_accepted_privacy', False)
-
     is_term_and_condition = data.get('is_term_and_condition', True)
     if not is_term_and_condition:
         return {'detail': 'please_accept_terms_condition'}, status.HTTP_428_PRECONDITION_REQUIRED
@@ -108,13 +83,6 @@ def register(request, data, is_web):
     # _term = Term.get_publish()
     # is_publish_term = bool(_term)
     # _is_accept_active_consent = True if not is_publish_term else data.get('is_accepted_active_consent', False)
-
-    if not data.get('is_accepted_term', False) and bool(Term.get_publish()):
-        return {'detail': 'please_accept_terms_condition'}, status.HTTP_400_BAD_REQUEST
-
-    _term = Term.get_publish()
-    is_publish_term = bool(_term)
-    _is_accept_active_consent = True if not is_publish_term else data.get('is_accepted_term', False)
 
     try:
         param_extra_field = json.dumps(param_extra_field)
@@ -151,7 +119,8 @@ def register(request, data, is_web):
         is_subscribe=data.get('is_subscribe', True),
         extra=param_extra_field,
         date_start=None,
-        is_accepted_active_consent=_is_accept_active_consent,
+        #TODO:Get check data consent
+        is_accepted_active_consent=True,
         # is_accepted_privacy=_is_accept_privacy,
         id_card=data.get('id_card', ''),
         code=data.get('code', ''),
@@ -159,29 +128,21 @@ def register(request, data, is_web):
         company=data.get('company', ''),
         count_experience=count_experience,
     )
-    if _is_accept_privacy and is_publish_privacy:
-        # PrivacyConsent.objects.create(account=_account, privacy=_privacy)
-        _privacy.consent(_account.id, True)
-    
-    if _is_accept_active_consent and is_publish_term:
-        # Consent.objects.create(account=_account, term=_term)
-        _term.consent(_account.id, True)
-
     _account.set_password(data.get('password'))
     _account.last_active = timezone.now()
     _account.save()
 
-    if Config.pull_value('config-verify-email-is-enabled'):
-        IdentityVerification.send_verification(_account, 1, 1)  # Send verify email
+    # if Config.pull_value('config-verify-email-is-enabled'):
+    #     IdentityVerification.send_verification(_account, 1, 1)  # Send verify email
 
-    Condition.update_all()
+    # Condition.update_all()
     login(request, _account, backend='django.contrib.auth.backends.ModelBackend')
     session_key = request.session.session_key
     if session_key is None:
         request.session.save()
         session_key = request.session.session_key
     Session.push(request.user, session_key)
-    request.session.set_expiry(Config.pull_value('config-session-age'))
+    # request.session.set_expiry(Config.pull_value('config-session-age'))
 
     if is_web:
         source = 0
@@ -189,12 +150,12 @@ def register(request, data, is_web):
         source = 1
 
     ip = get_client_ip(request)
-    AnalyticSession.push(_account, session_key, source, ip)
+    # AnalyticSession.push(_account, session_key, source, ip)
     Log.push(request, 'ACCOUNT_REGISTER', 'CONICLE', _account, 'Register Successful', status.HTTP_201_CREATED)
 
     # For check `is_editable` register profile
-    register_profile = Register()
-    register_profile.initial_register_profile()
+    # register_profile = Register()
+    # register_profile.initial_register_profile()
     return AccountSerializer(_account).data, status.HTTP_201_CREATED
 
 
@@ -205,8 +166,8 @@ class RegisterView(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.Gene
     serializer_class = RegisterSerializer
 
     def create(self, request, *args, **kwargs):
-        if not Config.pull_value('config-is-enable-register'):
-            raise NotAcceptable
+        # if not Config.pull_value('config-is-enable-register'):
+        #     raise NotAcceptable
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -216,8 +177,8 @@ class RegisterView(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.Gene
         response_data, status_response = register(request, data, False)
         return Response(data=response_data, status=status_response)
 
-    def list(self, request, *args, **kwargs):
-        if not Config.pull_value('config-is-enable-register'):
-            raise NotAcceptable
-        register_form = Register()
-        return Response(register_form.get_register_form_client)
+    # def list(self, request, *args, **kwargs):
+        # if not Config.pull_value('config-is-enable-register'):
+        #     raise NotAcceptable
+        # register_form = Register()
+        # return Response(register_form.get_register_form_client)

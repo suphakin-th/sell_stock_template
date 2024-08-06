@@ -1,5 +1,3 @@
-from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group, Permission
 from django.core.cache import cache
 
 from account.models import Account
@@ -28,6 +26,26 @@ def cache_account_delete(account_id):
 
     # Delete Redis Cached
     delete_value(key)
+    
+def cached_account_profile(account_id):
+    from account.serializers import AccountSerializer
+    key = 'account_profile_%s' % account_id
+    result = cache.get(key)
+    if result is None:
+        try:
+            account = Account.objects.get(id=account_id)
+            result = AccountSerializer(account).data
+            cache.set(key, result, get_time_out())
+            return result
+        except:
+            result = {}
+    if result:
+        # TODO: seperate api profile dataconsent
+        account = Account.objects.get(id=account_id)
+        result['is_accepted_term'] = account.is_accepted_term
+        result['is_accepted_privacy'] = account.is_accepted_privacy
+        result['is_accepted_data_consent'] = account.is_accepted_data_consent
+    return result
 
 
 def cache_user_account_id_list():
