@@ -16,7 +16,7 @@ from parse import parse
 
 from utils.encryption import AESCipher
 from utils.model_fields import JSONField
-from utils.model_permission import DEFAULT_PERMISSIONS
+from utils.model_permission import DEFAULT_PERMISSIONS 
 
 
 def generate_username():
