@@ -8,7 +8,7 @@ from django.conf import settings
 
 urlpatterns_api_user = [
     path('api/account/', include('account.urls')),
-
+    # path('api/profile/', include('ProfileView.urls'))
 ]
 
 urlpatterns_swagger = [
