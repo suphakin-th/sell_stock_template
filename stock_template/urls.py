@@ -3,12 +3,13 @@ from django.urls import path, re_path, include
 from django.views.static import serve
 
 from rest_framework_swagger.views import get_swagger_view
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+
 
 from django.conf import settings
 
 urlpatterns_api_user = [
     path('api/account/', include('account.urls')),
-    # path('api/profile/', include('ProfileView.urls'))
 ]
 
 urlpatterns_swagger = [

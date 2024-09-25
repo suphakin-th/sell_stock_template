@@ -24,8 +24,8 @@ router.routes[0] = Route(
     initkwargs={'suffix': 'List'}
 )
 router.register(r'login', LoginView)
-router.register(r'profile', ProfileView)
-router.register(r'register', RegisterView)
+router.register(r'profile', ProfileView, basename='account-profile')
+router.register(r'register', RegisterView, basename='account-register')
 
 
 urlpatterns = [
