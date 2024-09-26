@@ -520,3 +520,66 @@ class Ability(models.Model):
 class UserAbility(models.Model):
     account = models.ForeignKey('account.Account', on_delete=models.CASCADE)
     ability = models.ForeignKey('account.Ability', on_delete=models.CASCADE)
+
+def generate_token_field():
+    token = uuid.uuid4().hex
+    if IdentityVerification.objects.filter(token=token).exists():
+        generate_token_field()
+    return token
+
+
+class IdentityVerification(models.Model):
+    STATUS_CHOICES = (
+        (-1, 'deactivate'),
+        (1, 'activate'),
+        (2, 'completed'),
+        (3, 'expired'),
+    )
+
+    METHOD_CHOICES = (
+        (0, 'not_set'),
+        (1, 'email'),
+        (2, 'phone_number')
+    )
+
+    SENT_METHOD_CHOICE = (
+        (1, 'email'),
+        (2, 'sms')
+    )
+
+    account = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    token = models.CharField(unique=True, default=generate_token_field, max_length=120, db_index=True, editable=False)
+
+    status = models.IntegerField(choices=STATUS_CHOICES, default=1, db_index=True)
+    method = models.IntegerField(choices=METHOD_CHOICES, default=0, db_index=True)
+    send_method = models.IntegerField(choices=SENT_METHOD_CHOICE, default=1, db_index=True)
+
+    datetime_create = models.DateTimeField(auto_now_add=True, db_index=True)
+    datetime_expire = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        default_permissions = ()
+
+    @property
+    def is_verify(self):
+        if self.datetime_expire > timezone.now() and self.status == 1:
+            return True
+        else:
+            self.status = 3
+            self.save(update_fields=['status'])
+            return False
+
+    @staticmethod
+    def send_verification(account, method, send_method):
+        from inbox.tasks_push_email_verification import task_push_email_verification
+        if account.is_verified_email:
+            return False
+
+        IdentityVerification.objects.filter(account_id=account.id, status=1).update(status=-1)
+        expired_time = 15
+        datetime_expire = timezone.now() + datetime.timedelta(minutes=int(expired_time))
+        identity = IdentityVerification.objects.create(
+            account_id=account.id, method=method, send_method=send_method, datetime_expire=datetime_expire
+        )
+        task_push_email_verification.delay(token=identity.token)
+        return True
