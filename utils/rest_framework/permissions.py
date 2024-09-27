@@ -17,7 +17,6 @@ class DenyAny(BasePermission):
         return False
 
 
-# Check request data in conicle.middleware.RequestMiddleware
 def get_group(request):
     if request.IS_API:
         department_id = request.session.get('department_id', None)
@@ -461,40 +460,6 @@ class ExportPermission(BasePermissionAction):
     def has_object_permission(self, request, view, obj):
         return True
 
-
-# CONICLE STORE
-class ConicleStorePermission(object):
-
-    def has_permission(self, request, view):
-        if request.headers.get('Authorization', '') == Config.pull_value('config-conicle-store-key'):
-            return True
-        return False
-
-    def has_object_permission(self, request, view, obj):
-        return True
-
-
-class SSOConicleStorePermission(object):
-
-    def has_permission(self, request, view):
-        if request.user is None or not request.user.is_authenticated:
-            return False
-        if request.user.username in Config.pull_value('config-login-store') or request.user.email in Config.pull_value(
-                'config-login-store'):
-            return True
-        else:
-            return False
-
-        # get_group(request)
-        # if request.user.has_perm('%s.login_store_%s' % (view.app, view.model), group=request.AUTH_GROUP):
-        #     return True
-        # else:
-        #     return False
-
-    def has_object_permission(self, request, view, obj):
-        return True
-
-
 class UnauthorizedPermission(object):
     def has_permission(self, request, view):
         from django.conf import settings
@@ -502,24 +467,6 @@ class UnauthorizedPermission(object):
             return True
 
         return False
-
-    def has_object_permission(self, request, view, obj):
-        return True
-
-
-class ViewConicleX(BasePermissionAction):
-
-    def has_permission(self, request, view):
-        self.set_message_by_view(view)
-        request.is_view_coniclex = False
-
-        if request.user is None or not request.user.is_authenticated:
-            return False
-
-        get_group(request)
-        if request.user.has_perm('%s.view_by_coniclex_%s' % (view.app, view.model), group=request.AUTH_GROUP):
-            request.is_view_coniclex = True
-        return True
 
     def has_object_permission(self, request, view, obj):
         return True

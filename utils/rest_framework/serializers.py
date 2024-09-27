@@ -48,7 +48,6 @@ class ContentTypeDictSerializer(serializers.Serializer):
 
         res.update({
             'code': code,
-            'group': 'external' if model in ['coniclex', 'articleconiclex', 'pdfconiclex'] else 'internal'
         })
 
         return res

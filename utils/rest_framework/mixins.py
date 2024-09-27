@@ -62,13 +62,6 @@ class SortModelMixin(object):
                     pass
             content.sort = new_position
             content.save(update_fields=['sort'])
-            if self.content_type and self.content:
-                group_code = get_group_code_by_content_type_id(self.content_type.id)
-                if not getattr(self.content, 'is_coniclex', False) and group_code:
-                    ContentLog.push(None, request.user, 'sort',
-                                    content_type=self.content_type,
-                                    content_id=self.content.id
-                                    , group_code=group_code, action_code='CONTENT_UPDATED', method='PATCH', payload=data)
             self.clear_cache()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:

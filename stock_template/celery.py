@@ -27,13 +27,13 @@ app = Celery('stock_template')
 # https://www.rabbitmq.com/consumer-priority.html
 # Load task modules from all registered Django app configs.
 # task_queue_max_priority -> highest priority
-# celery -A conicle amqp queue.delete user
-# celery -A conicle amqp queue.delete user_priority
-# celery -A conicle amqp queue.delete dashboard
-# celery -A conicle amqp queue.delete encode
-# celery -A conicle amqp queue.delete export
-# celery -A conicle amqp queue.delete config
-# celery -A conicle amqp queue.delete permission
+# celery -A xxx amqp queue.delete user
+# celery -A xxx amqp queue.delete user_priority
+# celery -A xxx amqp queue.delete dashboard
+# celery -A xxx amqp queue.delete encode
+# celery -A xxx amqp queue.delete export
+# celery -A xxx amqp queue.delete config
+# celery -A xxx amqp queue.delete permission
 
 app.conf.update(
     timezone=TIME_ZONE,

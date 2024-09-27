@@ -12,7 +12,7 @@ from log.models import Log
 from utils.ip import get_client_ip
 from utils.response import Response
 from .models import Account, Session
-from .serializers import RegisterSerializer, AccountSerializer
+from .serializers import RegisterSerializer, AccountSerializer, ValidationEmailError
 
 def get_gender(gender):
     _gender = 0
@@ -49,41 +49,17 @@ def register(request, data, is_web):
             return {'detail': 'email_has_been_already_use'}, status.HTTP_409_CONFLICT
         try:
             validate_email(data.get('email'))
-        except ValidationError:
+        except ValidationEmailError:
             return {'detail': 'error_email_format'}, status.HTTP_400_BAD_REQUEST
-
-    # if len(data['password']) < 8:
-    #     return {'detail': 'Password must be minimum 8 characters'}, status.HTTP_400_BAD_REQUEST
-
-    # if not check_password(data['password']):
-    #     return {'detail': 'Invalid Password'}, status.HTTP_400_BAD_REQUEST
     if data.get('confirm_password'):
         if data.get('password') != data.get('confirm_password'):
             return {'detail': 'password_not_match'}, status.HTTP_400_BAD_REQUEST
-
-    # if 'is_term_and_condition' in data:
-    #     if not data['is_term_and_condition']:
-    
-    # if not data.get('is_accepted_privacy', False) and bool(Privacy.get_publish()):
-    #     return {'detail': 'please_accept_privacy'}, status.HTTP_400_BAD_REQUEST
-
-    # _privacy = Privacy.get_publish()
-    # is_publish_privacy = bool(_privacy)
-    # _is_accept_privacy = True if not is_publish_privacy else data.get('is_accepted_privacy', False)
 
     if not data.get('is_accepted_privacy', False):
         return {'detail': 'please_accept_privacy'}, status.HTTP_400_BAD_REQUEST
     is_term_and_condition = data.get('is_term_and_condition', True)
     if not is_term_and_condition:
         return {'detail': 'please_accept_terms_condition'}, status.HTTP_428_PRECONDITION_REQUIRED
-
-    # if not data.get('is_accepted_active_consent', False) and bool(Term.get_publish()):
-    #     return {'detail': 'please_accept_terms_condition'}, status.HTTP_400_BAD_REQUEST
-
-    # _term = Term.get_publish()
-    # is_publish_term = bool(_term)
-    # _is_accept_active_consent = True if not is_publish_term else data.get('is_accepted_active_consent', False)
-
     try:
         param_extra_field = json.dumps(param_extra_field)
     except:
@@ -121,7 +97,6 @@ def register(request, data, is_web):
         date_start=None,
         #TODO:Get check data consent
         is_accepted_active_consent=True,
-        # is_accepted_privacy=_is_accept_privacy,
         id_card=data.get('id_card', ''),
         code=data.get('code', ''),
         code2=data.get('code2'),
@@ -131,9 +106,6 @@ def register(request, data, is_web):
     _account.set_password(data.get('password'))
     _account.last_active = timezone.now()
     _account.save()
-
-    # if Config.pull_value('config-verify-email-is-enabled'):
-    #     IdentityVerification.send_verification(_account, 1, 1)  # Send verify email
 
     # Condition.update_all()
     login(request, _account, backend='django.contrib.auth.backends.ModelBackend')
@@ -151,7 +123,7 @@ def register(request, data, is_web):
 
     ip = get_client_ip(request)
     # AnalyticSession.push(_account, session_key, source, ip)
-    Log.push(request, 'ACCOUNT_REGISTER', 'CONICLE', _account, 'Register Successful', status.HTTP_201_CREATED)
+    Log.push(request, 'ACCOUNT_REGISTER', 'MEMBER', _account, 'Register Successful', status.HTTP_201_CREATED)
 
     # For check `is_editable` register profile
     # register_profile = Register()

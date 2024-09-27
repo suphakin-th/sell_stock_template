@@ -4,7 +4,7 @@ import logging
 from django.conf import settings as _settings
 from itertools import chain, groupby
 
-logger_celery = logging.getLogger('conicle_celery')
+logger_celery = logging.getLogger('stock_template')
 
 
 class BaseAlertTask(Task):
@@ -107,6 +107,3 @@ class BaseAlertTask(Task):
 #     elif _score > 1:
 #         score = 9
 #     return score
-#
-# if 'conicle.middleware.QueryCountDebugMiddleware' in _settings.MIDDLEWARE:
-#     BaseAlertTask = BaseAlertTaskWithLog
